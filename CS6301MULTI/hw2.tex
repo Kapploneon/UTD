@@ -1,0 +1,221 @@
+% !TEX TS-program = XeLaTeX
+\documentclass[]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+\usepackage{fontspec}
+\setmonofont[
+  Contextuals={Alternate}
+]{Fira Code}
+
+\makeatletter
+\def\verbatim@nolig@list{}
+\makeatother
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\titleformat{\subsection}{\normalfont\large\bfseries}{Exercise}{1em}{}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{navyblue}{rgb}{0.0, 0.0, 0.35}
+
+\lstset{frame=tb,
+  language=Java,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\footnotesize\ttfamily},
+  numbers=left,
+  numberstyle={\footnotesize\color{gray}\ttfamily},
+  keywordstyle={\bfseries\color{navyblue}},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  frame=single,
+  keepspaces=true,
+}
+
+\title{Homework 2}
+\author{Hanlin He (hxh160630)}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Chapter 7}
+
+\subsection{85}
+
+Consider a thread acquired and release the lock for the first time. Let $qnodeX$
+be the node created for the thread. After the thread released the lock, we will
+have:
+\begin{itemize}
+    \item $tail = qnodeX$
+    \item $qnodeX.locked = false$
+\end{itemize}
+If the same thread tries to acquire the lock again, the execution of
+\lstinline{lock} method would be:
+\begin{lstlisting}
+public void lock() {
+    Qnode qnode = myNode.get();         // qnode <- qnodeX
+    qnode.locked = true;                // qnodeX.locked <- true
+    Qnode pred = tail.getAndSet(qnode); // pred <- qnodeX
+    while (pred.locked) {}      // get stuck in pred.locked forever
+}
+\end{lstlisting}
+At line 4, return tail from \lstinline{tail.getAndSet(qnode)} will return $qnodeX$
+itself. And the $locked$ value was already set to $ true$, so the
+\lstinline{while}
+loop will never break.
+
+\subsection{91}
+
+\begin{itemize}
+    \item \verb|testAndSet()| spin lock:
+\begin{lstlisting}
+public boolean isLocked() {
+    return state.get();
+}
+\end{lstlisting}
+    \item CLH queue lock:
+\begin{lstlisting}
+public boolean isLocked() {
+    return tail.get().locked;
+}
+\end{lstlisting}
+    \item MCS queue lock:
+\begin{lstlisting}
+public boolean isLocked() {
+    return tail.get() != null;
+}
+\end{lstlisting}
+\end{itemize}
+
+\section*{Chapter 8}
+
+\subsection{95}
+\lstinputlisting{SavingsAccount/src/Account.java}
+\lstinputlisting{SavingsAccount/src/SavingsAccount.java}
+\lstinputlisting{SavingsAccount/src/SavingsAccountWithPreferredWithdraw.java}
+\lstinputlisting{SavingsAccount/src/SavingsAccountWithTransfer.java}
+
+\section*{Chapter 8}
+\subsection{24}
+\subsubsection*{For the first history}
+
+Let $H_1$ denotes the history, $\alpha$ denotes the
+operation $A:r.\mathrm{read}(1)$, $\beta$ and $\gamma$ denote the operations
+$B:r.\mathrm{write}(1)$ and $B:r.\mathrm{read}(2)$, and $\delta$ denotes the
+operation $C:r.\mathrm{write}(2)$:
+
+\begin{itemize}
+    \item Quiescently Consistent: Yes.
+
+        After execution of $\alpha$, $\beta$ and $\gamma$, the program became
+        quiescent. Thus, the history would be quiescently consistent if the
+        result of $\delta$ appear after $\alpha$, $\beta$ and $\gamma$. Suppose
+        $\gamma$ was the last operation to take effect among $\alpha$, $\beta$
+        and $\gamma$, the history would be legal and quiescently consistent.
+
+    \item Sequentially Consistent: Yes.
+
+        Consider the sequential history shown in \cref{24-1-seq}.
+        \begin{align}
+            \label{24-1-seq}
+            S_1 \equiv \alpha \rightarrow \beta \rightarrow \gamma \rightarrow \delta
+        \end{align}
+
+        $S_1$ is apparently equivalent with $H_1$. And the object subhistory of
+        $r$ is legal. Thus, the history $H_1$ is sequentially consistent.
+
+    \item Linearizable: Yes.
+
+        Consider the sequential history in \cref{24-1-seq} again. The preceding
+        relations of $H_1$ is
+        \[\rightarrow_{H_1} \equiv \left\{ \beta \rightarrow \gamma \right\}\]
+        Apparently, $\rightarrow_{H_1} \subseteq \rightarrow_{S_1}$. Thus, the
+        history $H$ is linearizable.
+\end{itemize}
+
+\subsubsection*{For the second history}
+
+Let $H_2$ denotes the history, $\alpha$ denotes the
+operation $A:r.\mathrm{read}(1)$, $\beta$ and $\gamma$ denote the operations
+$B:r.\mathrm{write}(1)$ and $B:r.\mathrm{read}(1)$, and $\delta$ denotes the
+operation $C:r.\mathrm{write}(2)$:
+
+\begin{itemize}
+    \item Quiescently Consistent: Yes.
+
+        After execution of $\alpha$, $\beta$ and $\gamma$, the program became
+        quiescent. Thus, the history would be quiescently consistent if the
+        result of $\delta$ appear after $\alpha$, $\beta$ and $\gamma$. Suppose
+        $\beta$ was the last operation to take effect among $\alpha$, $\beta$
+        and $\gamma$, the history would be legal and quiescently consistent.
+
+    \item Sequentially Consistent: Yes.
+
+        Consider the sequential history $S_2$ shown in \cref{24-2-seq}.
+        \begin{align}
+            \label{24-2-seq}
+            S_2 \equiv \delta \rightarrow \beta \rightarrow \alpha \rightarrow \gamma
+        \end{align}
+
+        $S_2$ is apparently equivalent with $H_2$. And the object subhistory of
+        $r$ is legal. Thus, the history $H_2$ is sequentially consistent.
+
+    \item Linearizable: Yes.
+
+        Consider the sequential history in \cref{24-2-seq} again. The preceding
+        relations of $H_2$ is
+        \[\rightarrow_{H_2} \equiv \left\{ \beta \rightarrow \gamma \right\}\]
+        Apparently, $\rightarrow_{H_2} \subseteq \rightarrow_{S_2}$. Thus, the
+        history $H_2$ is linearizable.
+\end{itemize}
+
+\subsection{27}
+
+Since Java does not guarantee linearizability, the definition of buffer would
+lead to linearizability problems.
+\begin{lstlisting}
+T[] items = (T[]) new Object[Integer.MAX_VALUE];
+\end{lstlisting}
+The \lstinline{items} was defined as an array of generic type \lstinline{T},
+instead of an array of \lstinline{AtomicReference<T>} or simply
+\lstinline{AtomicReferenceArray<T>}. The changes of one element in
+\lstinline{items} within one thread \lstinline{items[slot] = x;} may not be
+noticeable to other threads. So it is possible to have two threads $T_1$ and
+$T_2$ with a history $H$ that:
+\begin{align}
+    \label{27-H}
+    H: T_1.enq(1) \rightarrow T_2.deq() \text{ throw empty exception}
+\end{align}
+because \lstinline{value = items[slot]} in $T_2$ was still \lstinline{null}.
+
+The only legal sequence history for \cref{27-H} is:
+\begin{align}
+    \label{27-S}
+    S: T_2.deq() \text{ throw empty exception} \rightarrow T_1.enq(1)
+\end{align}
+
+Apparently, $\rightarrow_H \nsubseteq \rightarrow_S$, the implementation is not
+linearizable.
+
+\end{document}
