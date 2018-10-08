@@ -20,4 +20,9 @@ public class SavingsAccountWithTransfer extends SavingsAccount {
       this.transferMutex.unlock();
     }
   }
+
+  /*
+  If there are less than 10 threads for each account, all transfer
+  methods called at 1:00 are guaranteed to return at 2:00.
+   */
 }

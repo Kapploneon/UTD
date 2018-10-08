@@ -149,7 +149,13 @@ operation $C:r.\mathrm{write}(2)$:
 
         Consider the sequential history in \cref{24-1-seq} again. The preceding
         relations of $H_1$ is
-        \[\rightarrow_{H_1} \equiv \left\{ \beta \rightarrow \gamma \right\}\]
+        \begin{align}
+            \rightarrow_{H_1} \equiv \left\{ 
+                \alpha \rightarrow \gamma,
+                \beta \rightarrow \gamma,
+                \delta \rightarrow \gamma,
+            \right\}
+        \end{align}
         Apparently, $\rightarrow_{H_1} \subseteq \rightarrow_{S_1}$. Thus, the
         history $H$ is linearizable.
 \end{itemize}
@@ -185,7 +191,13 @@ operation $C:r.\mathrm{write}(2)$:
 
         Consider the sequential history in \cref{24-2-seq} again. The preceding
         relations of $H_2$ is
-        \[\rightarrow_{H_2} \equiv \left\{ \beta \rightarrow \gamma \right\}\]
+        \begin{align}
+            \rightarrow_{H_2} \equiv \left\{ 
+                \alpha \rightarrow \gamma,
+                \beta \rightarrow \gamma,
+                \delta \rightarrow \gamma,
+            \right\}
+        \end{align}
         Apparently, $\rightarrow_{H_2} \subseteq \rightarrow_{S_2}$. Thus, the
         history $H_2$ is linearizable.
 \end{itemize}
@@ -201,15 +213,14 @@ The \lstinline{items} was defined as an array of generic type \lstinline{T},
 instead of an array of \lstinline{AtomicReference<T>} or simply
 \lstinline{AtomicReferenceArray<T>}. The changes of one element in
 \lstinline{items} within one thread \lstinline{items[slot] = x;} may not be
-noticeable to other threads. So it is possible to have two threads $T_1$ and
-$T_2$ with a history $H$ that:
+noticeable to other threads immediately. So it is possible to have two threads
+$T_1$ and $T_2$ with a history $H$ that:
 \begin{align}
     \label{27-H}
     H: T_1.enq(1) \rightarrow T_2.deq() \text{ throw empty exception}
 \end{align}
-because \lstinline{value = items[slot]} in $T_2$ was still \lstinline{null}.
-
-The only legal sequence history for \cref{27-H} is:
+because \lstinline{value = items[slot]} in $T_2$ was still \lstinline{null}
+after $T_1.enq(1)$. However, the legal sequence history for \cref{27-H} is:
 \begin{align}
     \label{27-S}
     S: T_2.deq() \text{ throw empty exception} \rightarrow T_1.enq(1)
