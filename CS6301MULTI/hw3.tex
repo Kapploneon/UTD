@@ -1,0 +1,253 @@
+\documentclass[]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\titleformat{\subsection}{\normalfont\large\bfseries}{Exercise}{1em}{}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{navyblue}{rgb}{0.0, 0.0, 0.35}
+
+\lstset{
+  % frame=tb,
+  language=Java,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\ttfamily},
+  numbers=left,
+  numberstyle={\footnotesize\color{gray}\ttfamily},
+  keywordstyle={\bfseries\color{navyblue}},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  % frame=single,
+  keepspaces=true,
+}
+
+\title{Homework 3}
+\author{Hanlin He\footnote{\texttt{hxh160630@utdallas.edu}},
+Lizhong Zhang\footnote{\texttt{lxz160730@utdallas.edu}}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Chapter 5}
+
+\subsection{54}
+
+Since we have \lstinline{peek()} method for queue, we can simply let each thread
+enqueue its thread ID after proposing the value, and then return value by which
+the first thread in the queue (\lstinline{peek()} from queue) had proposed. Code
+are shown as follow:
+\begin{lstlisting}
+public class QueueConsensus<T> extends ConsensusProtocol<T> { 
+  Queue queue;
+  public QueueConsensus() { 
+    queue = new Queue();
+  }
+  // figure out which thread was first 
+  public T decide(T value) {
+    propose(value);
+    int i = ThreadID.get();
+    // enq current id.
+    queue.enq(i)
+    // return value of the first thread in the queue
+    return proposed[queue.peek()];
+  }
+}
+\end{lstlisting}
+By doing so, we can allow any arbitrary large number of threads competing but
+only one thread will be return from \lstinline{peek()}, and thus all threads
+will decide on the same value. Therefore the consensus number would be infinite.
+
+\subsection{57}
+
+If we announced the thread’s value after dequeuing from the queue, it is
+possible that the thread which `\lstinline{WIN}' propose its value after the
+\lstinline{LOSE} thread trying to return the \lstinline{proposed[1-i]}, which
+would lead to a null return value.
+
+\subsection{58}
+
+We can implement the binary consensus protocol using the StickyBit as follow:
+\begin{lstlisting}
+public class StickyBitConsensus { 
+  StickyBit sb;
+  public StickyBitConsensus() { 
+    sb = new StickyBit();
+  }
+  public int decide(int value) {
+    sb.write(value)
+    // return value of the first thread performed the sb.write()
+    return sb.read()
+  }
+}
+\end{lstlisting}
+This solution works because for any number of threads, only the first thread
+successfuly performed \lstinline{sb.write()} would be able to change the value
+of \lstinline{sb}. Then all thread will return the same value in \lstinline{sb}.
+
+Given $m$ possible input, we can label all possible input with an integer from
+$0$ to $m-1$. We can encode the integer in $\log_2m$ bit and then code with an
+array of \lstinline{StickyBit} as follow:
+\begin{lstlisting}
+public class MStickyBitConsensus { 
+  StickyBit[] sbits;
+  public StickyBitConsensus(int m) {
+    // suppose Math.log return ceiling of log.
+    sbits = new StickyBit[Math.log(m)];
+    for (int i = 0; i < sbits.length; i++)
+      sbits[i] = new StickyBit();
+  }
+
+  public boolean decide(int value) {
+    int i = sbits.length - 1;
+    while (value != 0) {
+      sbits[i].write(value & 1);
+      // if the thread failed to write current StickyBit
+      // there is no need to write to following StickyBits, 
+      // because some other thread must have succeeded me.
+      if (sbits[i].read != (value & 1))
+        break;
+      value >> 1;
+      i--;
+    }
+    int ret = 0;
+    for (StickyBit sb : sbits) {
+      // if current StickyBit haven't been written yet, wait.
+      while (sb.read() != 1 || sb.read() != 0);
+      ret |= sb.read();
+      ret << 1;
+    }
+    return ret;
+  }
+}
+\end{lstlisting}
+
+\section*{Chapter 9}
+
+\subsection{104}
+
+Suppose there are three thread $A$, $B$ and $C$, a possible execution would be:
+\begin{enumerate}
+  \item $A$ located the window $pred \rightarrow curr$.
+  \item $B$ located the window $pred \rightarrow curr$, locked the window, added $x$ between $pred$ and $curr$, and then
+  unlocked the window.
+  \item $A$ locked the window, validation failed because $pred \nrightarrow
+  curr$, unlocked the window and retried.
+  \item $C$ located the window $pred \rightarrow x$, locked the window, removed
+  $x$, and then unlocked the window.
+  \item $A$ located the window $pred \rightarrow curr$ and previous steps
+  happened again.
+\end{enumerate}
+From this execution, $A$ located the same window every time, but failed to move
+forward because $B$ and $C$ added/removed an element between $pred$ and $curr$,
+invalidating the windows located by $A$.
+
+\subsection{110}
+
+If setting the next field of the node to be deleted to \lstinline{null}, the
+linked list would be broken. Any other threads trying to traverse the linked
+list to a latter node would fail. Thus, it won't work by setting the next field
+to \lstinline{null}.
+
+\subsection{112}
+
+The reasoning only conisdered the remove scenario. It is still possible that the
+window $pred \rightarrow curr$ was modified by \lstinline{add(x)} to 
+$pred \rightarrow x \rightarrow curr$. In this scenario, validation should still
+fail because $pred \nrightarrow curr$.
+
+\section*{Chapter 10}
+
+\subsection{122}
+
+It is necessary to hold the lock when checking that the queue is not empty.
+
+Consider a queue with only one element. If we didn't lock the queue, it is
+possible that two threads are both able to pass 
+\lstinline{if (head.next == null)} check and proceed.
+
+After the one thread \emph{lock-process-unlock} the queue, the other thread will
+encounter \lstinline{NullPointerException} when it tried to dereference
+\lstinline{head.next.value} in line 18 \lstinline{result = head.next.value;}
+
+\subsection{125}
+
+Based on the implementation:
+\begin{itemize}
+  \item The \lstinline{enq()} operation is wait-free/lock-free, because both
+  operations in \lstinline{enq()} wait-free.
+  \item The \lstinline{deq()} operation is not wait-free, but lock-free.
+  
+  A possible scenario would be, when a thread get the range by
+  \lstinline{tail.get()}, some other threads get the same value and deque the
+  value by invoking \lstinline{items[i].getAndSet(null);}. Then the prevois
+  thread will fail because all element it encountered would be \lstinline{null}
+  and the thread would retry.
+
+  A thread could be overtaken by other threads as described above arbitrary
+  number of times. Hence the \lstinline{deq()} is not wait-free.
+
+  However, as long as there are elements in the queue, some threads will always
+  succeed in dequeue operation, since there are always some not-null value
+  returned from \lstinline{items[i].getAndSet(null)}. Therefore,
+  \lstinline{deq()} is lock-free. 
+\end{itemize}
+
+Furthermore, the linearization point for \lstinline{deq()} method would be the
+first time that \lstinline{items[i].getAndSet(null)} return a not-null value.
+
+The linearization point for \lstinline{enq()} depends on the execution order of
+\lstinline{enq()} and \lstinline{deq()}:
+\begin{itemize}
+\item If all \lstinline{enq()} invocations happened before all
+\lstinline{deq()}, then the linearization point would be line 6:
+\begin{lstlisting}[firstnumber=6]
+int i = tail.getAndIncrement();\end{lstlisting}
+Because the order of the elements dequeued would be solely depend on the
+index $i$ returned from \lstinline{tail.getAndIncrement()}.
+
+\item If some \lstinline{deq()} invocations happens concurrently with the
+\lstinline{enq()}, actual linearization point could be line 7:
+\begin{lstlisting}[firstnumber=7]
+items[i].set(x);\end{lstlisting}
+Because, \lstinline{deq()} invocation could happen before all \lstinline{enq()}
+finished setting the element in the array. During such scenario, the
+\lstinline{deq()} will return the first not-null element it encountered.
+
+A concrete example would be:
+\begin{enumerate}
+  \item Thread $A$ tried to \lstinline{enq(1)}, while thread $B$ tried to
+  \lstinline{enq(2)}.
+  \item Thread $A$ got \lstinline{i = 10}, while thread $B$ got
+  \lstinline{i = 11}.
+  \item Thread $B$ successfuly invoked \lstinline{item[12].set(2)} before $A$.
+  \item Before thread $A$ invoke \lstinline{item[10].set(1)}, another thread $C$
+  invoked \lstinline{deq()}.
+  \item The first element thread $C$ encountered would be \lstinline{item[12]},
+  which is $2$.
+  \item \lstinline{C.deq()} would return $2$.
+\end{enumerate}
+Therefore the linearization point should be line 7.
+
+\end{itemize}
+
+\end{document}
